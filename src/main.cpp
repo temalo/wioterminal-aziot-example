@@ -580,6 +580,7 @@ void setup()
 
     ////////////////////
     // Sync time server
+    
     ntp.begin();
 
     ////////////////////
