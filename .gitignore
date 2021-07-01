@@ -2,3 +2,4 @@
 .vscode/
 /.pio/
 /out/
+*.uf2

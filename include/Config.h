@@ -34,7 +34,7 @@
 
 #endif // USE_CLI
 
-#define IOT_CONFIG_MODEL_ID					"dtmi:seeedkk:wioterminal:wioterminal_aziot_example;5"
+#define IOT_CONFIG_MODEL_ID					"dtmi:local:wioterminal_aziot_example;5"
 
 #define TOKEN_LIFESPAN                      3600
 
@@ -47,3 +47,7 @@
 #define TELEMETRY_CENTER_BUTTON             "centerButton"
 #define TELEMETRY_LEFT_BUTTON               "leftButton"
 #define COMMAND_RING_BUZZER					"ringBuzzer"
+#define TELEMETRY_5WAY_HAT                  "hatSwitch"
+#define TELEMETRY_MIC                       "mic"
+#define TELEMETRY_GPS_LAT                   "latitude"
+#define TELEMETRY_GPS_LON                   "longitude"

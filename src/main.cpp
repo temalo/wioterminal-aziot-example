@@ -17,6 +17,8 @@
 #include <azure/core/az_result.h>
 #include <azure/core/az_span.h>
 #include <azure/iot/az_iot_hub_client.h>
+#include <TinyGPS++.h>
+#include <wiring_private.h>
 
 #define MQTT_PACKET_SIZE 1024
 
@@ -44,6 +46,15 @@ const char* ROOT_CA_BALTIMORE =
 "ksLi4xaNmjICq44Y3ekQEe5+NauQrz4wlHrQMz2nZQ/1/I6eYs9HRCwBXbsdtTLS\n"
 "R9I4LtD+gdwyah617jzV/OeBHRnDJELqYzmp\n"
 "-----END CERTIFICATE-----";
+
+static const uint32_t GPSBaud = 9600;
+
+TinyGPSPlus gps;
+ 
+// The serial connection to the GPS device - Left side Grove connector.
+// Left side Grove connector shares pins with I2C1 of 40 pin connector.
+
+static Uart Serial3(&sercom3, PIN_WIRE_SCL, PIN_WIRE_SDA, SERCOM_RX_PAD_1, UART_TX_PAD_0);
 
 WiFiClientSecure wifi_client;
 PubSubClient mqtt_client(wifi_client);
@@ -133,6 +144,44 @@ static const int ButtonNumber = 3;
 static AceButton Buttons[ButtonNumber];
 static bool ButtonsClicked[ButtonNumber];
 
+static double getGPSLat(){        
+    if (gps.location.isValid())
+    return gps.location.lat();
+    else {
+        Serial.println(gps.location.lat(), 6);
+        return -999.999;
+    }    
+}
+static double getGPSLon(){    
+    if (gps.location.isValid())
+    return gps.location.lng();
+    else return -999.999;
+}
+
+
+static long checkMic(){
+    return analogRead(WIO_MIC);
+}
+
+static int checkHat(){
+    if (digitalRead(WIO_5S_UP) == LOW) {
+    return 15;
+   }
+   else if (digitalRead(WIO_5S_DOWN) == LOW) {
+    return 5;
+   }
+   else if (digitalRead(WIO_5S_LEFT) == LOW) {
+    return 10;
+   }
+   else if (digitalRead(WIO_5S_RIGHT) == LOW) {
+    return 20;
+   }
+   else if (digitalRead(WIO_5S_PRESS) == LOW) {
+    return 100;
+   }
+   return 0;
+}
+
 static void ButtonEventHandler(AceButton* button, uint8_t eventType, uint8_t buttonState)
 {
     const uint8_t id = button->getId();
@@ -144,13 +193,13 @@ static void ButtonEventHandler(AceButton* button, uint8_t eventType, uint8_t but
         switch (static_cast<ButtonId>(id))
         {
         case ButtonId::RIGHT:
-            DisplayPrintf("Right button was clicked");
+            DisplayPrintf("Right button was activated");
             break;
         case ButtonId::CENTER:
-            DisplayPrintf("Center button was clicked");
+            DisplayPrintf("Center button was activated");
             break;
         case ButtonId::LEFT:
-            DisplayPrintf("Left button was clicked");
+            DisplayPrintf("Left button was activated");
             break;
         }
         ButtonsClicked[id] = true;
@@ -178,6 +227,7 @@ static void ButtonDoWork()
         Buttons[i].check();
     }
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Azure IoT DPS
@@ -333,6 +383,20 @@ static az_result SendTelemetry()
     int light;
     light = analogRead(WIO_LIGHT) * 100 / 1023;
 
+    int hat;
+    hat = checkHat();
+
+    int mic;
+    mic = checkMic();
+    
+    double latitude=99.9999;
+    double longitude=99.9999;
+    while (Serial3.available() > 0)
+    if (gps.encode(Serial3.read())){
+     latitude = getGPSLat();    
+     longitude = getGPSLon();
+    }
+
     char telemetry_topic[128];
     if (az_result_failed(az_iot_hub_client_telemetry_get_publish_topic(&HubClient, NULL, telemetry_topic, sizeof(telemetry_topic), NULL)))
     {
@@ -352,6 +416,14 @@ static az_result SendTelemetry()
     AZ_RETURN_IF_FAILED(az_json_writer_append_double(&json_builder, accelZ, 3));
     AZ_RETURN_IF_FAILED(az_json_writer_append_property_name(&json_builder, AZ_SPAN_LITERAL_FROM_STR(TELEMETRY_LIGHT)));
     AZ_RETURN_IF_FAILED(az_json_writer_append_int32(&json_builder, light));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_property_name(&json_builder, AZ_SPAN_LITERAL_FROM_STR(TELEMETRY_5WAY_HAT)));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_int32(&json_builder, hat));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_property_name(&json_builder, AZ_SPAN_LITERAL_FROM_STR(TELEMETRY_MIC)));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_int32(&json_builder, mic));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_property_name(&json_builder, AZ_SPAN_LITERAL_FROM_STR(TELEMETRY_GPS_LAT)));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_double(&json_builder, latitude,5));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_property_name(&json_builder, AZ_SPAN_LITERAL_FROM_STR(TELEMETRY_GPS_LON)));
+    AZ_RETURN_IF_FAILED(az_json_writer_append_double(&json_builder, longitude,5));
     AZ_RETURN_IF_FAILED(az_json_writer_append_end_object(&json_builder));
     const az_span out_payload{ az_json_writer_get_bytes_used_in_destination(&json_builder) };
 
@@ -526,10 +598,24 @@ void setup()
 
     ////////////////////
     // Init I/O
+    
+    pinMode(WIO_BUZZER, OUTPUT);
+    pinMode(WIO_MIC, INPUT);
+    pinMode(WIO_5S_UP, INPUT_PULLUP);
+    pinMode(WIO_5S_DOWN, INPUT_PULLUP);
+    pinMode(WIO_5S_LEFT, INPUT_PULLUP);
+    pinMode(WIO_5S_RIGHT, INPUT_PULLUP);
+    pinMode(WIO_5S_PRESS, INPUT_PULLUP);
+
+    ////////////////////////
+    // Initialize the GPS Module
+    // Make sure it is in the LEFT port
+
+    Serial3.begin(GPSBaud);
+    pinPeripheral(PIN_WIRE_SCL, PIO_SERCOM_ALT);
+    pinPeripheral(PIN_WIRE_SCL, PIO_SERCOM_ALT);
 
     Serial.begin(115200);
-
-    pinMode(WIO_BUZZER, OUTPUT);
 
     ////////////////////
     // Init display
@@ -602,7 +688,7 @@ void setup()
 }
 
 void loop()
-{
+{    
     ButtonDoWork();
 
     static uint64_t reconnectTime;
@@ -628,11 +714,10 @@ void loop()
             DisplayPrintf("Disconnect");
             mqtt_client.disconnect();
             return;
-        }
-
+        }        
         mqtt_client.loop();
 
-        static unsigned long nextTelemetrySendTime = 0;
+        static unsigned long nextTelemetrySendTime = 0;        
         if (millis() > nextTelemetrySendTime)
         {
             SendTelemetry();
@@ -648,4 +733,20 @@ void loop()
             }
         }
     }
+}
+void SERCOM3_0_Handler()
+{
+  Serial3.IrqHandler();
+}
+void SERCOM3_1_Handler()
+{
+  Serial3.IrqHandler();
+}
+void SERCOM3_2_Handler()
+{
+  Serial3.IrqHandler();
+}
+void SERCOM3_3_Handler()
+{
+  Serial3.IrqHandler();
 }
