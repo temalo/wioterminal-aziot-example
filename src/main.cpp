@@ -144,6 +144,11 @@ static const int ButtonNumber = 3;
 static AceButton Buttons[ButtonNumber];
 static bool ButtonsClicked[ButtonNumber];
 
+////////////////////////////////////////////////////////////////////////////////
+// A very simple method to read the GPS location data
+// If the GPS data is not valid, output the latitude value to the serial terminal
+// The serial output is simply for debug purposes
+
 static double getGPSLat(){        
     if (gps.location.isValid())
     return gps.location.lat();
@@ -158,10 +163,19 @@ static double getGPSLon(){
     else return -999.999;
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+// Read the instantaneous microphone value. This is an analog sensor, so the value
+// represents the ambient noise at the time of reading
+// This will provide a very simplistic noise meter
 
 static long checkMic(){
     return analogRead(WIO_MIC);
 }
+
+//////////////////////////////////////////////////////////////////////////////////////
+// This is a rudimentary example of how to read the 5-way Hat
+// You could also choose to perform some action based on the hat position
+// This will return a 0 unless the hat is either clicked, or moved left/right/up/down
 
 static int checkHat(){
     if (digitalRead(WIO_5S_UP) == LOW) {
@@ -181,6 +195,9 @@ static int checkHat(){
    }
    return 0;
 }
+//////////////////////////////////////////////////////////////////////////////////////////
+// Since we can use these buttons for any action, it is best to include them in an event
+// handler, instead of a simplistic get method like we've done for other sensors
 
 static void ButtonEventHandler(AceButton* button, uint8_t eventType, uint8_t buttonState)
 {
@@ -207,6 +224,10 @@ static void ButtonEventHandler(AceButton* button, uint8_t eventType, uint8_t but
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Because we are using events to read the button state, there is a fair amount of work to do
+// in order to initialize the handler and to code the DoWork() method
+
 static void ButtonInit()
 {
     Buttons[static_cast<int>(ButtonId::RIGHT)].init(WIO_KEY_A, HIGH, static_cast<uint8_t>(ButtonId::RIGHT));
@@ -230,7 +251,7 @@ static void ButtonDoWork()
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Azure IoT DPS
+// Azure IoT Device Provisioning Service (DPS)
 
 static AzureDpsClient DpsClient;
 static unsigned long DpsPublishTimeOfQueryStatus = 0;
@@ -372,6 +393,9 @@ static int ConnectToHub(az_iot_hub_client* iot_hub_client, const std::string& ho
 
     return 0;
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// The SendTelemetry method is where all of the real work happens, reading the sensors and then
+// constructing the telemetry payload that will be delivered to the IoT Hub
 
 static az_result SendTelemetry()
 {
@@ -734,6 +758,11 @@ void loop()
         }
     }
 }
+/////////////////////////////////////////////////////////////////////////////////
+// Since the Grove GPS module is a serial device, we will need to provide 
+// definitions for the Interrupt handlers. These will simply point back to the
+// TinyGPS library that we linked above
+
 void SERCOM3_0_Handler()
 {
   Serial3.IrqHandler();
