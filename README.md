@@ -134,6 +134,12 @@ You can read more on the Azure IoT client library [here](https://github.com/Azur
 
 ## Author
 
+👤 **Ted Malone**
+* LinkedIn: [@temalone](https://www.linkedin.com/in/temalone/)
+* Twitter: [@tedmalone](https://twitter.com/tedmalone)
+* Github: [@temalo](https://github.com/temalo)
+* Website: https://blog.sqltrainer.com
+
 👤 **Benjamin Cabé**
 
 * Website: https://blog.benjamin-cabe.com
@@ -150,14 +156,14 @@ You can read more on the Azure IoT client library [here](https://github.com/Azur
 
 Contributions, issues and feature requests are welcome!
 
-Feel free to check [issues page](https://github.com/SeeedJP/wioterminal-aziot-example/issues).
+Feel free to check [issues page](https://github.com/temalo/wioterminal-aziot-example/issues).
 
 ## Show your support
 
 Give a ⭐️ if this project helped you!
 
 ## 📝 License
-
+Copyright &copy; 2021 [Ted Malone](https://github.com/temalo).
 Copyright &copy; 2020 [Benjamin Cabé](https://github.com/kartben).  
 Copyright &copy; 2020 Seeed K.K.
 
