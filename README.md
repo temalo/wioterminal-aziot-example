@@ -163,7 +163,7 @@ Feel free to check [issues page](https://github.com/temalo/wioterminal-aziot-exa
 Give a ⭐️ if this project helped you!
 
 ## 📝 License
-Copyright &copy; 2021 [Ted Malone](https://github.com/temalo).
+Copyright &copy; 2021 [Ted Malone](https://github.com/temalo). 
 Copyright &copy; 2020 [Benjamin Cabé](https://github.com/kartben).  
 Copyright &copy; 2020 Seeed K.K.
 
